@@ -16,6 +16,7 @@ def check_file_content(file_path: str) -> bool:
         file_content = file.read()
         if file_path.endswith(".html"):
             file_content = BeautifulSoup(file_content, "html.parser").get_text()
+            print(file_content)
         if toxicity(file_path):
             print(f"❌ Toxicity detected in file path of {file_path}")
             return True
@@ -29,7 +30,9 @@ if __name__ == "__main__":
     modified_files = os.popen("git diff --name-only HEAD^ HEAD").read().split()
     offensive_found = False
     for file in modified_files:
+        print(f"{file}")
         if os.path.exists(file) and check_file_content(file):
+            print(f"Testing {file}")
             offensive_found = True
     if offensive_found:
         sys.exit(1)
