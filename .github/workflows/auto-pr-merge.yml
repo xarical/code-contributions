@@ -50,6 +50,8 @@ jobs:
         run: pip install bs4 groq
 
       - name: Run toxicity check
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python scripts/check_toxicity.py
 
       - name: Auto-approve PR if valid for auto-approve
