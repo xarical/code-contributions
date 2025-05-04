@@ -15,11 +15,11 @@ def check_file_content(file_path: str) -> bool:
     with open(file_path, "r", encoding="utf-8", errors="ignore") as file:
         file_content = file.read()
         if file_path.endswith(".html"):
-            content = BeautifulSoup(file_content, "html.parser").get_text()
+            file_content = BeautifulSoup(file_content, "html.parser").get_text()
         if toxicity(file_path):
             print(f"❌ Toxicity detected in file path of {file_path}")
             return True
-        elif toxicity(content):
+        elif toxicity(file_content):
             print(f"❌ Toxicity detected in file content of {file_path}")
             return True
         else:
