@@ -10,6 +10,7 @@ client = Groq()
 
 def text_is_toxic(text) -> bool:
     """Analyze toxicity of text using Groq"""
+    print(text[:4096])
     completion = client.chat.completions.create(
         model="gemma2-9b-it",
         messages=[
@@ -26,7 +27,7 @@ def text_is_toxic(text) -> bool:
         max_completion_tokens=128, # Limit to ~512 characters
         response_format={"type": "json_object"},
     )
-    result = completion.choices[0].message
+    result = completion.choices[0].message.content
     print("Model response:", result)
     return json.loads(result)["flag"]
 
