@@ -25,6 +25,7 @@ def text_is_toxic(text) -> bool:
         temperature=0,
         max_completion_tokens=128, # Limit to ~512 characters
         response_format={"type": "json_object"},
+        api_key=os.environ["GROQ_API_KEY"],
     )
     result = completion.choices[0].message
     print("Model response:", result)
