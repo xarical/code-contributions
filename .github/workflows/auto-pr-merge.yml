@@ -21,7 +21,8 @@ jobs:
 
       - name: Get a list of files changed in the pull request
         run: |
-          PR_FILES=$(gh pr view ${{ github.event.pull_request.html_url }} --json files --jq '.[].filename')
+          PR_FILES=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files \
+            --jq '.[].filename')
           FILES_CHANGED=$(echo $PR_FILES | tr '\n' ' ')
           echo "FILES_CHANGED=$FILES_CHANGED" >> $GITHUB_ENV
         env:
