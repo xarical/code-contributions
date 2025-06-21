@@ -57,7 +57,7 @@ jobs:
 
       - name: Auto-approve PR if not flagged
         if: success() && steps.only_contributors_check.outputs.only_contributors == 'true'
-        uses: hmarr/auto-approve-action@v3
+        uses: alexwilson/enable-github-automerge-action@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
