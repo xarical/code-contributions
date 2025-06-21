@@ -1,80 +1,61 @@
-import sys
+import json
 import os
-import magic
+import sys
+
 from bs4 import BeautifulSoup
-from transformers import pipeline
+from groq import Groq
 
-# Load the toxicity detection model
-classifier = pipeline("text-classification", model="unitary/toxic-bert")
 
-# List of offensive words (modify as needed)
-OFFENSIVE_WORDS = ["fuck", "shit", "bitch"]  
+client = Groq()
+MODEL = "gemma2-9b-it"
+SYSTEM_PROMPT = """\
+Determine whether or not the given string contains any offensive material. 
+Respond with true if the string contains any offensive material and false if it contains no offensive material.
+Respond in json format with a field \"reason\" set to an explanation and \"flag\" set to true or false.
+"""
+MAX_INPUT_CHARS = 4096 #  Limit to ~1024 tokens
 
-def is_text_file(file_path):
-    """Check if the file is a text-based file (not binary)"""
-    mime = magic.Magic(mime=True)
-    file_type = mime.from_file(file_path)
-    return file_type.startswith("text")
 
-def check_text(text):
-    """Analyze text using the toxicity classifier"""
-    result = classifier(text[:512])  # Limit to 512 tokens (model constraint)
-    label = result[0]["label"]
-    score = result[0]["score"]
-    
-    return label == "toxic" and score > 0.7  # If toxic, return True
+def text_is_toxic(text) -> bool:
+    """
+    Analyze toxicity of text using an LLM served by Groq
+    """
+    result = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT,
+            },
+            {
+                "role": "user",
+                "content": f"'''\n{text[:MAX_INPUT_CHARS]}\n'''", 
+            }
+        ],
+        temperature=0,
+        max_completion_tokens=128, # Limit to ~512 characters
+        response_format={"type": "json_object"},
+    ).choices[0].message.content
+    print("[DEBUG] Model response:", result) # DEBUG
+    return json.loads(result)["flag"]
 
-def check_file_content(file_path):
-    """Read file and analyze its content for toxicity"""
-    if not is_text_file(file_path):
-        print(f"⚠️ Skipping binary file: {file_path}")
-        return False
-    
-    with open(file_path, "r", encoding="utf-8", errors="ignore") as file:
-        content = file.read()
-        
-        # If it's an HTML file, extract text
-        if file_path.endswith(".html"):
-            soup = BeautifulSoup(content, "html.parser")
-            content = soup.get_text()
 
-        return check_text(content)
+def file_is_toxic(file_path: str) -> bool:
+    """
+    Analyze the file path and content for toxicity
+    """
+    with open(file_path) as file:
+        file_content = BeautifulSoup(
+            file.read(), # Read the HTML file
+            "html.parser",
+        ).get_text() # Extract the text from the HTML file
+    return text_is_toxic(file_path) or text_is_toxic(file_content)
 
-def check_filename(file_name):
-    """Check if the filename contains offensive words"""
-    lower_name = file_name.lower()
-    for word in OFFENSIVE_WORDS:
-        if word in lower_name:
-            print(f"❌ Offensive word detected in filename: {file_name}")
-            return True
-    return False
-
-def main():
-    """Check all modified files in the PR"""
-    offensive_found = False
-    
-    # Get list of modified files from Git
-    modified_files = os.popen("git diff --name-only HEAD^ HEAD").read().split()
-    
-    for file in modified_files:
-        if not os.path.exists(file):
-            continue  # Skip deleted files
-        
-        # Check filename for offensive words
-        if check_filename(file):
-            offensive_found = True
-
-        # Check file content for toxicity
-        if check_file_content(file):
-            print(f"❌ Offensive content detected in {file}")
-            offensive_found = True
-
-    # Block the PR if any offensive content was found
-    if offensive_found:
-        sys.exit(1)
-    else:
-        print("✅ No offensive content found.")
-        sys.exit(0)
 
 if __name__ == "__main__":
-    main()
+    toxic = False
+    for file_path in os.popen("git diff --name-only HEAD^ HEAD").read().split(): # For each file in the diff,
+        if os.path.exists(file_path) and file_is_toxic(file_path): # Check it if it exists and is toxic
+            print(f"🚩 Flagged {file_path}")
+            toxic = True
+    sys.exit(1) if toxic else sys.exit(0) # Exit with a non-zero status code if toxic
