@@ -39,9 +39,9 @@ jobs:
             const onlyContributors = filesChanged === expected;
             core.setOutput('only_contributors', onlyContributors);
 
-      # Debug
-      - name: Echo value of steps.only_contributors_check.outputs.only_contributors
-        run: echo ${{ steps.only_contributors_check.outputs.only_contributors }}
+      # # Debug
+      # - name: Echo value of steps.only_contributors_check.outputs.only_contributors
+      #   run: echo ${{ steps.only_contributors_check.outputs.only_contributors }}
 
       - name: Set up Python
         uses: actions/setup-python@v3
